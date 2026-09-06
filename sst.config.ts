@@ -1,6 +1,6 @@
 /// <reference path="./.sst/platform/config.d.ts" />
  
-export default $config({
+ export default $config({
   app(input) {
     const tags = {
       Project: "claim-status",

@@ -21,6 +21,7 @@ async function processClaim(page, row, options = {}) {
 
   return runHipaaProviderSearch(page, row, options.providerOrder || [], {
     projectId: options.projectId,
+    providerMode: options.providerMode,
     matchingPolicy: options.matchingPolicy
   });
 }

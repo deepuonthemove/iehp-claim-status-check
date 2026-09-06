@@ -20,12 +20,15 @@ function isRecoverableRowError(message) {
   return /Target page, context or browser has been closed|Browser page was closed|page was closed|context.*closed|browser.*closed|submit did not produce results, no-results message, or validation response/i.test(String(message || ""));
 }
 
-async function processClaim(page, row) {
+async function processClaim(page, row, options = {}) {
   logger.info("Using BCBSTX workflow: Member search first, then HIPAA Standard fallback when applicable.");
 
   if (isBluecarePayer(row)) {
     logger.info("BCBSTX workflow detected Blue Cross Medicare Advantage Plan. Using Bluecare Member search path first.");
-    const memberResult = await runBluecareMemberProviderSearch(page, row, PROVIDERS);
+    const memberResult = await runBluecareMemberProviderSearch(page, row, PROVIDERS, {
+      projectId: options.projectId,
+      providerMode: options.providerMode,
+    });
     if (memberResult.status === "success") {
       return memberResult;
     }
@@ -61,7 +64,10 @@ async function processClaim(page, row) {
 
   if (memberAvailable && groupNumber) {
     logger.info("Member tab is available and Group No is present. Trying Member search first.");
-    const memberResult = await runMemberProviderSearch(page, row, PROVIDERS);
+    const memberResult = await runMemberProviderSearch(page, row, PROVIDERS, undefined, {
+      projectId: options.projectId,
+      providerMode: options.providerMode,
+    });
     if (memberResult.status === "success") {
       return memberResult;
     }
@@ -84,7 +90,11 @@ async function processClaim(page, row) {
     logger.warn("Member search did not find a matching Service Date + Charges row. Falling back to HIPAA Standard search.");
     let hipaaResult;
     try {
-      hipaaResult = await runHipaaProviderSearch(page, row, PROVIDERS);
+      hipaaResult = await runHipaaProviderSearch(page, row, PROVIDERS, {
+        projectId: options.projectId,
+        providerMode: options.providerMode,
+        matchingPolicy: options.matchingPolicy
+      });
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
       if (isRecoverableRowError(message)) {
@@ -126,7 +136,11 @@ async function processClaim(page, row) {
     };
   }
 
-  return runHipaaProviderSearch(page, row, PROVIDERS);
+  return runHipaaProviderSearch(page, row, PROVIDERS, {
+    projectId: options.projectId,
+    providerMode: options.providerMode,
+    matchingPolicy: options.matchingPolicy
+  });
 }
 
 module.exports = {

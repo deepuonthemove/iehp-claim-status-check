@@ -47,11 +47,14 @@ async function getBluecareMemberResultRows(page) {
   return results;
 }
 
-async function runBluecareMemberProviderSearch(page, row, providerOrder = PROVIDERS) {
+async function runBluecareMemberProviderSearch(page, row, providerOrder = PROVIDERS, options = {}) {
   let lastProviderFailure = "";
 
   for (const provider of providerOrder) {
-    await searchBluecareMemberWithProvider(page, provider, row.data);
+    await searchBluecareMemberWithProvider(page, provider, row.data, {
+      projectId: options.projectId,
+      providerMode: options.providerMode,
+    });
 
     logger.info(`Waiting up to 5 seconds for ${provider} Bluecare Member search results to settle`);
     const resultSummary = await waitForSearchResultsToSettle(page, 5000);

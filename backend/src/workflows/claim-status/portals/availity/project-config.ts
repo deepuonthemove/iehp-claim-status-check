@@ -446,6 +446,7 @@ export function getSelectionRuleProviderOrder(
   login = "",
 ): string[] | undefined {
   const config = getAvailityProjectConfig(projectId);
+  const providerConfig = config.provider;
   const practice = findRowValue(row, ["Group", "Practice", "Organization Group"]);
   const inputPayerName = findRowValue(row, ["Portal Payer Name", "Payer Name"]);
   const state = getPortalStateForRow(projectId, row) || "";
@@ -457,24 +458,42 @@ export function getSelectionRuleProviderOrder(
     state,
   });
   const providerName = rule?.use.providerName?.trim();
-  return providerName ? [providerName] : undefined;
+  const providerMode = rule?.use.providerMode || (providerName ? "groupNameOnly" : undefined);
+  if (!providerMode) return undefined;
+
+  const inputProviderNpi = providerConfig?.inputNpiField
+    ? findRowValue(row, [providerConfig.inputNpiField])
+    : "";
+  const providerOrder = Array.from(new Set([
+    ...(providerMode === "groupNameOnly" ? [providerName || ""] : providerMode === "groupNameFirst" ? [providerName || "", inputProviderNpi] : [inputProviderNpi, providerName || ""]),
+  ].filter(Boolean)));
+
+  return providerOrder.length ? providerOrder : undefined;
+}
+
+export function getSelectionRuleProviderMode(
+  projectId: string,
+  row: AvailityInputRow,
+  portalPayerName: string,
+  login = "",
+): string | undefined {
+  const config = getAvailityProjectConfig(projectId);
+  const practice = findRowValue(row, ["Group", "Practice", "Organization Group"]);
+  const inputPayerName = findRowValue(row, ["Portal Payer Name", "Payer Name"]);
+  const state = getPortalStateForRow(projectId, row) || "";
+  const rule = findBestSelectionRule(config.selectionRules || [], {
+    practice,
+    payer: portalPayerName,
+    inputPayerName,
+    login,
+    state,
+  });
+  return rule?.use.providerMode || (rule?.use.providerName ? "groupNameOnly" : undefined);
 }
 
 export function getServiceDateProviderFieldPolicy(projectId: string, row: AvailityInputRow, portalPayerName: string, login = ""): AvailityProviderFieldPolicy | undefined {
   const config = getAvailityProjectConfig(projectId);
-  const providerRule = findBestSelectionRule(config.selectionRules || [], {
-    practice: findRowValue(row, ["Group", "Practice", "Organization Group"]),
-    payer: portalPayerName,
-    inputPayerName: findRowValue(row, ["Portal Payer Name", "Payer Name"]),
-    login,
-    state: getPortalStateForRow(projectId, row) || "",
-  });
-  if (providerRule?.use.providerTaxIdFrom) {
-    return {
-      providerDropdown: { fill: false },
-      providerTaxId: { fill: true, valueFrom: providerRule.use.providerTaxIdFrom, required: true },
-    };
-  }
+  void login;
   return findProviderFieldPolicy(config.fieldPolicies?.serviceDates || [], row, portalPayerName);
 }
 

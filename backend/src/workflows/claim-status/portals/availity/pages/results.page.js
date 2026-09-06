@@ -83,6 +83,42 @@ async function getPortalMessages(page) {
   })));
 }
 
+async function getVisibleFieldValidationMessages(page) {
+  const frame = await getClaimStatusFrame(page);
+  const invalidFieldMessages = await frame.locator(
+    "[aria-invalid='true'][aria-describedby], .MuiFormHelperText-root.Mui-error, .invalid-feedback"
+  ).evaluateAll((nodes) => {
+    const messages = [];
+    for (const node of nodes) {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      if (style.visibility === "hidden" || style.display === "none" || rect.width === 0 || rect.height === 0) continue;
+      if (node.matches("[aria-invalid='true'][aria-describedby]")) {
+        const ids = (node.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+        for (const id of ids) {
+          const description = document.getElementById(id);
+          if (description) messages.push({ text: description.innerText || description.textContent || "", className: "error" });
+        }
+      } else {
+        messages.push({ text: node.innerText || node.textContent || "", className: `${node.className || ""} error` });
+      }
+    }
+    return messages;
+  }).catch(() => []);
+
+  return deduplicatePortalMessages(invalidFieldMessages.map((message) => ({
+    severity: inferMessageSeverity(message.className),
+    text: normalizeMessageText(message.text)
+  })));
+}
+
+async function throwIfVisibleFieldValidation(page, context = "Availity") {
+  const messages = await getVisibleFieldValidationMessages(page);
+  if (!messages.length) return;
+
+  throw new Error(`${context} field validation failed before submit. ${formatPortalMessages(messages)}`);
+}
+
 function normalizeMoney(value) {
   const numeric = Number(String(value || "").replace(/[$,\s]/g, "").trim());
   return Number.isFinite(numeric) ? numeric.toFixed(2) : "";
@@ -281,5 +317,7 @@ module.exports = {
   normalizeMoney,
   normalizeDateText,
   getPortalMessages,
-  formatPortalMessages
+  formatPortalMessages,
+  getVisibleFieldValidationMessages,
+  throwIfVisibleFieldValidation
 };

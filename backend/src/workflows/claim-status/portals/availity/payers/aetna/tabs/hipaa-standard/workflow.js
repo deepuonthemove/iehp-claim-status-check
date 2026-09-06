@@ -28,6 +28,7 @@ async function processClaim(page, row, options = {}) {
     : AETNA_PROVIDER_ORDER;
   return runHipaaProviderSearch(page, row, providerOrder, {
     projectId: options.projectId,
+    providerMode: options.providerMode,
     matchingPolicy: options.matchingPolicy
   });
 }

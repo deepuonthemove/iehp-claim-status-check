@@ -158,9 +158,7 @@ export function createWaystarRunner(): AutomationRunner<EligibilityRunInput> {
                 page,
                 log: (message) => context.log({ level: "debug", message, eventName: "eligibility_browser_cleanup" }),
               });
-              // Keep the shared Waystar browser visible while testing both
-              // Minimax and MedRevenue project configurations.
-              const session = await launchAutomationBrowser({ headless: false });
+              const session = await launchAutomationBrowser();
               browser = session.browser;
               browserContext = session.context;
               page = await browserContext.newPage();

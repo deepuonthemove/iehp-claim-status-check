@@ -9,6 +9,7 @@ import {
   getPortalStateForRow,
   getProjectInputHeaders,
   getProviderOrderForRow,
+  getSelectionRuleProviderOrder,
   normalizeProjectId,
   resolvePortalSelections,
 } from "./project-config";
@@ -263,6 +264,24 @@ describe("Charm project config", () => {
       group: "open mind",
       providerName: "MAPPED PROVIDER",
     }]), ["1234567890", "987654321"]);
+  });
+
+  it("uses Charm Provider NPI for Charm Feel Better rcmjeff", () => {
+    const row: AvailityInputRow = {
+      input_row_id: 1,
+      source_row_number: 2,
+      data: applyProjectColumnMapping("charm", {
+        Practice: "Feel Better",
+        "Payer to choose in Availity": "Carelon Behavioral Health",
+        "Provider NPI": "1124359583",
+        "Provider Tax ID": "987654321",
+      }),
+    };
+
+    assert.deepEqual(
+      getSelectionRuleProviderOrder("charm", row, "Carelon Behavioral Health", "rcmjeff"),
+      ["1124359583"],
+    );
   });
 
   it("normalizes named Charm DOB and service dates", () => {

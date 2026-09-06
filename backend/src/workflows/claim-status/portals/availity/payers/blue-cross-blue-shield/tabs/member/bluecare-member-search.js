@@ -3,6 +3,8 @@
 const logger = require("../../../../utils/logger");
 const { humanDelay, withRetry } = require("../../../../utils/browser");
 const { getClaimStatusFrame } = require("../../../../pages/navigation.page");
+const { clearProviderFormIfVisible, fillInputProviderIdentifiers } = require("../../../../pages/provider-identifiers.page");
+const { throwIfVisibleFieldValidation } = require("../../../../pages/results.page");
 
 const SELECTORS = {
   memberTabButton: "button[role='tab']:has-text('Member')",
@@ -198,6 +200,7 @@ async function submitBluecareMemberSearch(page) {
     async () => {
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         const frame = await getClaimStatusFrame(page);
+        await throwIfVisibleFieldValidation(page, "Bluecare Member");
         const submitButton = frame.locator(SELECTORS.submitButton).first();
         await submitButton.waitFor({ state: "visible", timeout: 15000 });
         await submitButton.scrollIntoViewIfNeeded().catch(() => {});
@@ -221,10 +224,40 @@ async function submitBluecareMemberSearch(page) {
   );
 }
 
-async function searchBluecareMemberWithProvider(page, providerName, rowData) {
+async function searchBluecareMemberWithProvider(page, providerName, rowData, options = {}) {
   logger.info(`Bluecare Member search provider attempt: ${providerName}`);
   await selectMemberTab(page);
+  if (options.projectId === "charm") {
+    await clearProviderFormIfVisible(page, { context: "Charm Bluecare Member", logger });
+    const providerFill = await fillInputProviderIdentifiers(page, rowData, {
+      charmRequiredOnly: true,
+      logger,
+      providerMode: options.providerMode,
+    });
+    if (providerFill?.providerIdentifierReady) {
+      await fillBluecareMemberSearchForm(page, rowData);
+      await submitBluecareMemberSearch(page);
+      return;
+    }
+    if (!providerFill?.requiresProviderDropdown) {
+      throw new Error("Charm Bluecare Member provider identifiers could not be filled deterministically.");
+    }
+  }
   await selectProvider(page, providerName);
+  if (options.projectId === "charm") {
+    const providerFillAfterDropdown = await fillInputProviderIdentifiers(page, rowData, {
+      charmRequiredOnly: true,
+      logger,
+      providerMode: options.providerMode,
+      providerDropdownSelected: true,
+    });
+    if (providerFillAfterDropdown?.requiresProviderDropdown) {
+      throw new Error("Charm Bluecare Member provider dropdown was selected, but required provider fields were still not auto-filled.");
+    }
+    if (!providerFillAfterDropdown?.providerIdentifierReady) {
+      throw new Error("Charm Bluecare Member provider identifiers were still incomplete after provider selection.");
+    }
+  }
   await fillBluecareMemberSearchForm(page, rowData);
   await submitBluecareMemberSearch(page);
 }

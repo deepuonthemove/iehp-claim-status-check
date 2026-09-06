@@ -78,12 +78,14 @@ export type AvailityRuleWhen = {
   state?: string | string[];
 };
 
+export type AvailityProviderSelectionMode = "individualNpiFirst" | "groupNameFirst" | "groupNameOnly";
+
 export type AvailitySelectionRule = {
   when: AvailityRuleWhen;
   use: {
     organization?: string;
     providerName?: string;
-    providerTaxIdFrom?: string;
+    providerMode?: AvailityProviderSelectionMode;
   };
 };
 

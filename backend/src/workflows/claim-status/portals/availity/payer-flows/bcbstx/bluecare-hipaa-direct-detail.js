@@ -5,7 +5,7 @@ const { humanDelay, withRetry } = require("../../utils/browser");
 const { getClaimStatusFrame } = require("../../pages/navigation.page");
 const { PROVIDERS } = require("../../pages/claim-status-member.page");
 const { fillHipaaSearchForm, HIPAA_SELECTORS, selectHipaaTab, selectProvider } = require("../../pages/claim-status-hipaa.page");
-const { normalizeDateText, normalizeMoney } = require("../../pages/results.page");
+const { normalizeDateText, normalizeMoney, throwIfVisibleFieldValidation } = require("../../pages/results.page");
 const { normalizeStatus } = require("../../services/status-normalizer");
 const { renderClaimSummary, renderFailedSummary } = require("../../services/summary-renderer");
 
@@ -45,6 +45,7 @@ async function submitBluecareHipaaSearchExpectingDetail(page) {
     async () => {
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         const frame = await getClaimStatusFrame(page);
+        await throwIfVisibleFieldValidation(page, "Bluecare HIPAA");
         const submitButton = frame.locator(HIPAA_SELECTORS.submitButton).first();
         await submitButton.waitFor({ state: "visible", timeout: 15000 });
         await submitButton.scrollIntoViewIfNeeded().catch(() => {});

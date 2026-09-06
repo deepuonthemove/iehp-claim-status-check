@@ -47,6 +47,14 @@ async function processClaim(page, row, options = {}) {
     ? options.providerOrder
     : PROVIDERS;
 
+  if (options.projectId === "charm" && await isSearchTabVisible(page, "Service Dates")) {
+    logger.info("Using Blue Cross-family Charm tab priority: Service Dates tab first.");
+    return serviceDatesWorkflow.processClaim(page, row, {
+      ...options,
+      providerOrder
+    });
+  }
+
   if (await isSearchTabVisible(page, "HIPAA Standard")) {
     logger.info("HIPAA Standard tab is available; selecting it as the highest-priority search.");
     if (isBluecarePayer(row)) {
@@ -54,6 +62,7 @@ async function processClaim(page, row, options = {}) {
     }
     return runHipaaProviderSearch(page, row, providerOrder, {
       projectId: options.projectId,
+      providerMode: options.providerMode,
       matchingPolicy: options.matchingPolicy
     });
   }
@@ -68,7 +77,10 @@ async function processClaim(page, row, options = {}) {
 
   if (isBluecarePayer(row)) {
     logger.info("BCBSTX workflow detected Blue Cross Medicare Advantage Plan. Using Bluecare Member search path first.");
-    const memberResult = await runBluecareMemberProviderSearch(page, row, providerOrder);
+    const memberResult = await runBluecareMemberProviderSearch(page, row, providerOrder, {
+      projectId: options.projectId,
+      providerMode: options.providerMode,
+    });
     if (memberResult.status === "success") {
       return memberResult;
     }
@@ -104,7 +116,10 @@ async function processClaim(page, row, options = {}) {
 
   if (memberAvailable && groupNumber) {
     logger.info("Member tab is available and Group No is present. Trying Member search first.");
-    const memberResult = await runMemberProviderSearch(page, row, providerOrder);
+    const memberResult = await runMemberProviderSearch(page, row, providerOrder, undefined, {
+      projectId: options.projectId,
+      providerMode: options.providerMode,
+    });
     if (memberResult.status === "success") {
       return memberResult;
     }
@@ -129,6 +144,7 @@ async function processClaim(page, row, options = {}) {
     try {
       hipaaResult = await runHipaaProviderSearch(page, row, providerOrder, {
         projectId: options.projectId,
+        providerMode: options.providerMode,
         matchingPolicy: options.matchingPolicy
       });
     } catch (error) {
@@ -174,6 +190,7 @@ async function processClaim(page, row, options = {}) {
 
   return runHipaaProviderSearch(page, row, providerOrder, {
     projectId: options.projectId,
+    providerMode: options.providerMode,
     matchingPolicy: options.matchingPolicy
   });
 }

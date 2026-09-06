@@ -3,6 +3,8 @@
 const logger = require("../utils/logger");
 const { humanDelay, withRetry } = require("../utils/browser");
 const { getClaimStatusFrame } = require("./navigation.page");
+const { clearProviderFormIfVisible, fillInputProviderIdentifiers } = require("./provider-identifiers.page");
+const { throwIfVisibleFieldValidation } = require("./results.page");
 
 const PROVIDERS = ["TRINITY PAIN MANAGEMENT", "DAO, THUAN DUC"];
 
@@ -437,11 +439,45 @@ async function hasNoResults(page) {
   return frame.locator(SELECTORS.noResultsMessage).isVisible().catch(() => false);
 }
 
-async function searchMemberWithProvider(page, providerName, rowData) {
+async function searchMemberWithProvider(page, providerName, rowData, options = {}) {
   logger.info(`Member search provider attempt: ${providerName}`);
   await selectMemberTab(page);
+  if (options.projectId === "charm") {
+    await clearProviderFormIfVisible(page, { context: "Charm Member", logger });
+    const providerFill = await fillInputProviderIdentifiers(page, rowData, {
+      charmRequiredOnly: true,
+      logger,
+      providerMode: options.providerMode,
+    });
+    if (providerFill?.providerIdentifierReady) {
+      await fillMemberSearchForm(page, rowData);
+      await throwIfVisibleFieldValidation(page, "Charm Member");
+      await submitMemberSearch(page);
+      return;
+    }
+    if (!providerFill?.requiresProviderDropdown) {
+      throw new Error("Charm Member provider identifiers could not be filled deterministically.");
+    }
+  }
   await selectProvider(page, providerName);
+  if (options.projectId === "charm") {
+    const providerFillAfterDropdown = await fillInputProviderIdentifiers(page, rowData, {
+      charmRequiredOnly: true,
+      logger,
+      providerMode: options.providerMode,
+      providerDropdownSelected: true,
+    });
+    if (providerFillAfterDropdown?.requiresProviderDropdown) {
+      throw new Error("Charm Member provider dropdown was selected, but required provider fields were still not auto-filled.");
+    }
+    if (!providerFillAfterDropdown?.providerIdentifierReady) {
+      throw new Error("Charm Member provider identifiers were still incomplete after provider selection.");
+    }
+  }
   await fillMemberSearchForm(page, rowData);
+  if (options.projectId === "charm") {
+    await throwIfVisibleFieldValidation(page, "Charm Member");
+  }
   await submitMemberSearch(page);
 }
 

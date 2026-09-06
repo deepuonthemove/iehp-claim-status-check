@@ -45,7 +45,6 @@ export const charmAvailityConfig: AvailityProjectConfig = {
         "Grey Matters": "William Nields, PLLC",
         Dumont: "Dumont medical PLLC",
         Premier: "Premier Health",
-        Bentoville: "BENTONVILLE PEDIATRICS, P.A.",
         Bentonville: "BENTONVILLE PEDIATRICS, P.A.",
       },
       skipValues: ["Sharon"],
@@ -58,20 +57,54 @@ export const charmAvailityConfig: AvailityProjectConfig = {
     {
       when: {
         practice: "Feel Better",
-        payer: "Carelon Behavioral Health",
+        login: "rcmjeff",
       },
       use: {
         organization: "Open Mind Health",
-        providerName: "OPEN MIND MENTAL HEALTH PHYSICIANS, INC.",
+        providerMode: "individualNpiFirst",
+      },
+    },
+    {
+      when: {
+        practice: "Feel Better",
+        login: "rcmben",
+      },
+      use: {
+        organization: "FEEL BETTER BEHAVIORAL HEALTH SERVICES LLC",
       },
     },
     {
       when: {
         practice: "Open Mind",
-        payer: "TRIWEST-VA CCN",
+        login: "rcmben",
+        state: "California",
+        payer: "AETNA (COMMERCIAL & MEDICARE)",
       },
       use: {
-        providerTaxIdFrom: "Provider Tax ID",
+        organization: "Open Mind Health",
+        providerName: "OPEN MIND MENTAL HEALTH PHYSICIANS, INC.",
+        providerMode: "groupNameOnly",
+      },
+    },
+    {
+      when: {
+        practice: "Open Mind",
+        login: "rcmben",
+        state: "California",
+      },
+      use: {
+        organization: "Open Mind Health",
+        providerName: "OPEN MIND MENTAL HEALTH PHYSICIANS, INC.",
+        providerMode: "groupNameFirst",
+      },
+    },
+    {
+      when: {
+        practice: "Grey Matters",
+        login: "rcmbrandon",
+      },
+      use: {
+        organization: "William Nields, PLLC",
       },
     },
   ],

@@ -4,6 +4,7 @@ const logger = require("../utils/logger");
 const { humanDelay, withRetry } = require("../utils/browser");
 const { getClaimStatusFrame } = require("./navigation.page");
 const { clearProviderFormIfVisible, clearProviderStateForTaxIdFallback, fillInputProviderIdentifiers, getInputProviderIdentifiers, hasInputProviderIdentifiers, verifyProviderNpiMatches } = require("./provider-identifiers.page");
+const { throwIfVisibleFieldValidation } = require("./results.page");
 
 const HIPAA_SELECTORS = {
   hipaaTab: "button[role='tab']:has-text('HIPAA Standard')",
@@ -743,12 +744,28 @@ async function searchHipaaWithProvider(page, providerName, rowData, options = {}
   logger.info(`HIPAA Standard search provider attempt: ${providerName}`);
   await selectHipaaTab(page);
   const isCharm = options.projectId === "charm";
+  const groupNameOnly = isCharm && options.providerMode === "groupNameOnly";
   if (isCharm) {
     await clearProviderFormIfVisible(page, { context: "Charm HIPAA", logger });
+    const providerFill = await fillInputProviderIdentifiers(page, rowData, {
+      charmRequiredOnly: true,
+      logger,
+      providerMode: options.providerMode,
+    });
+    if (providerFill?.providerIdentifierReady) {
+      await fillHipaaSearchForm(page, rowData);
+      await throwIfVisibleFieldValidation(page, "Charm HIPAA");
+      await submitHipaaSearch(page);
+      return;
+    }
+    if (!providerFill?.requiresProviderDropdown) {
+      throw new Error("Charm HIPAA provider identifiers could not be filled deterministically.");
+    }
   }
   const providerIdentifiers = getInputProviderIdentifiers(rowData);
   const providerAsTaxId = Boolean(providerIdentifiers.taxId && String(providerName || "").replace(/\D/g, "") === providerIdentifiers.taxId);
   let fillTaxIdOnly = false;
+  let providerDropdownSelected = false;
   if (providerAsTaxId && providerIdentifiers.taxId) {
     logger.info(`HIPAA provider identifier "${providerName}" is a Tax ID. Filling Provider Tax ID directly.`);
     await clearProviderStateForTaxIdFallback(page, { context: "HIPAA Tax ID fallback", logger });
@@ -756,7 +773,12 @@ async function searchHipaaWithProvider(page, providerName, rowData, options = {}
   } else {
     try {
       await selectProvider(page, providerName, options);
+      providerDropdownSelected = true;
     } catch (error) {
+      if (groupNameOnly) {
+        error.providerSelectionFailed = true;
+        throw error;
+      }
       if (providerIdentifiers.taxId) {
         fillTaxIdOnly = true;
         const frame = await getClaimStatusFrame(page);
@@ -777,11 +799,22 @@ async function searchHipaaWithProvider(page, providerName, rowData, options = {}
       }
     }
   }
-  await fillInputProviderIdentifiers(page, fillTaxIdOnly ? { ...rowData, "Provider NPI": "" } : rowData, {
+  const providerFillAfterDropdown = await fillInputProviderIdentifiers(page, fillTaxIdOnly ? { ...rowData, "Provider NPI": "" } : rowData, {
     charmRequiredOnly: isCharm,
     logger,
+    providerMode: options.providerMode,
+    providerDropdownSelected,
   });
+  if (isCharm && providerFillAfterDropdown?.requiresProviderDropdown) {
+    throw new Error("Charm HIPAA provider dropdown was selected, but required provider fields were still not auto-filled.");
+  }
+  if (isCharm && !providerFillAfterDropdown?.providerIdentifierReady && !providerFillAfterDropdown?.requiresProviderDropdown) {
+    throw new Error("Charm HIPAA provider identifiers were still incomplete after provider selection.");
+  }
   await fillHipaaSearchForm(page, rowData);
+  if (isCharm) {
+    await throwIfVisibleFieldValidation(page, "Charm HIPAA");
+  }
   await submitHipaaSearch(page);
 }
 

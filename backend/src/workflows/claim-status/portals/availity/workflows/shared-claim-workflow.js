@@ -333,11 +333,14 @@ async function processSearchResults(page, row, provider, resultSummary, sourceTa
   return processParsedSearchResults(page, row, provider, resultSummary, sourceTab, resultRows, noMatchStatus, options);
 }
 
-async function runMemberProviderSearch(page, row, providerOrder = PROVIDERS, searchFunction = searchMemberWithProvider) {
+async function runMemberProviderSearch(page, row, providerOrder = PROVIDERS, searchFunction = searchMemberWithProvider, options = {}) {
   let lastProviderFailure = "";
 
   for (const provider of providerOrder) {
-    await searchFunction(page, provider, row.data);
+    await searchFunction(page, provider, row.data, {
+      projectId: options.projectId,
+      providerMode: options.providerMode,
+    });
 
     logger.info(`Waiting up to 5 seconds for ${provider} search results to settle`);
     const resultSummary = await waitForSearchResultsToSettle(page, 5000);
@@ -387,6 +390,7 @@ async function runHipaaProviderSearch(page, row, providerOrder = PROVIDERS, opti
       await searchHipaaWithProvider(page, provider, row.data, {
         allowFuzzyProviderFallback: Boolean(options.matchingPolicy?.allowFuzzyProviderSelection),
         projectId: options.projectId,
+        providerMode: options.providerMode,
         requireDropdownProviderSelection: fallbackProviderOnlyOnSelectionFailure
       });
     } catch (error) {

@@ -1,7 +1,7 @@
 "use strict";
 
 const logger = require("../../../../utils/logger");
-const { getPortalMessages, formatPortalMessages } = require("../../../../pages/results.page");
+const { getPortalMessages, formatPortalMessages, throwIfVisibleFieldValidation } = require("../../../../pages/results.page");
 const { humanDelay, withRetry } = require("../../../../utils/browser");
 const { getClaimStatusFrame } = require("../../../../pages/navigation.page");
 const { PROVIDERS } = require("../../../../pages/claim-status-member.page");
@@ -46,6 +46,7 @@ async function submitBluecareHipaaSearchExpectingDetail(page) {
     async () => {
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         const frame = await getClaimStatusFrame(page);
+        await throwIfVisibleFieldValidation(page, "Bluecare HIPAA");
         const submitButton = frame.locator(HIPAA_SELECTORS.submitButton).first();
         await submitButton.waitFor({ state: "visible", timeout: 15000 });
         await submitButton.scrollIntoViewIfNeeded().catch(() => {});

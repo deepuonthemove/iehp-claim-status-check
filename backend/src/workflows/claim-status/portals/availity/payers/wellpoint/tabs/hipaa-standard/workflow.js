@@ -27,6 +27,7 @@ async function processClaim(page, row, options = {}) {
     : PROVIDERS;
   return runHipaaProviderSearch(page, row, providerOrder, {
     projectId: options.projectId,
+    providerMode: options.providerMode,
     matchingPolicy: options.matchingPolicy,
     useHipaaDeniedExtractorForDeniedStatus: true,
     hipaaExtractionOptions: {
